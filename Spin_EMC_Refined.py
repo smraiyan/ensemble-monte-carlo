@@ -10,7 +10,6 @@ from scipy.optimize import curve_fit
 import time 
 from alive_progress import alive_bar as abar
 
-
 # %% List of Global System Parameters 
 global vs, vxyzt, isp, N, lenT, Time, dt, ks, rs, kmeant, rmeant, tpskip 
 global e, j, m0, hbar, ep0, g, a, c, kB, sx, sy, sz, Eg, Eso, EgL, Gamma
@@ -31,7 +30,6 @@ lenT = 1000        # Number of Time Points
 T = Ts[selT]            # Temperature in K
 Ni = Nis[selNi]         # Impurity density (n-type) 
 Ndis = Ndiss[selNdis]   # Dislocation density (negatively charged)
-Gamma = 5e14    # Auto-Calibrable Scattering rate
 fdis = 1.0      # Probablity of filling up a dislocation site with an electron
 isp = 1.0       # Initial x-Spin polarization 
 tpskip = 10     # How much time points to be skipped   
@@ -47,9 +45,8 @@ sz = matrix([[ 1, 0],[ 0, -1 ]])   # Pauli Matrices
 E = array([100, 0, 0])     # E-field (1 V/cm)
 f, fk, kT = e*E/m, e*E/hbar, kB*T
 
-# Material Parameters 
-# For AlGaN, Param_AlGaN = x*Param_AlN + (1-x)*Param_GaN
-# For GaN (comment while simulating AlN) 
+# Material Parameters  
+# For GaN (comment while simulating AlN/AlGaN) 
 a = 3.186e-10                  # Fundamental Lattice Const
 c = 5.186e-10                  # Basal Lattice Const
 Eg = (3.427-(((5.31156e-4)*T*T)/(T+992)))*e   # Bandgap 
@@ -60,7 +57,8 @@ epInf = 5.35*ep0               # HF Dieletric Const
 m = 0.2*m0                     # Effective mass
 muB = e*hbar/(2*m)             # Bohr Magneton 
 aNP = (e/Eg)*(1-m/m0)**2       # Non-parabolicity Const
-eta = Eso/(Eso+Eg)                
+eta = Eso/(Eso+Eg) 
+Gamma = 1e15    # Auto-Calibrable Scattering rate               
 ye = 0.32*1e-30     # Dresselhaus SOC term
 ae = 0.009*e*1e-10  # Rashba SOC term
 Bk = 3.9580123
@@ -76,7 +74,7 @@ Nc = 4.3e14*T**1.5    # Effective DOS in Con band
 Nv = 8.9e15*T**1.5    # Effective DOS in Val band 
 EtaR = -E*(e*hbar/m)*pi*Eso*(Eso+2*Eg)/(Eg*(Eg+Eso)*(3*Eg+2*Eso)) 
 
-# For AlN (comment while simulating GaN)
+# For AlN (comment while simulating GaN/AlGaN)
 a = 0.31117e-10                # Fundamental Lattice Const
 c = 0.49788e-10                # Basal Lattice Const
 Eg = (6.292-(((1.799e-3)*T*T)/(T+1462)))*e   # Bandgap 
@@ -87,7 +85,8 @@ epInf = 4.84*ep0               # HF Dieletric Const
 m = 0.4*m0                     # Effective mass
 muB = e*hbar/(2*m)             # Bohr Magneton 
 aNP = (e/Eg)*(1-m/m0)**2       # Non-parabolicity Const
-eta = Eso/(Eso+Eg)                
+eta = Eso/(Eso+Eg)  
+Gamma = 1e14    # Auto-Calibrable Scattering rate              
 ye = 2.2591*1e-30       # Dresselhaus SOC term
 ae = 0.77011*e*1e-13    # Rashba SOC term
 Bk = 12.5725643
@@ -102,6 +101,37 @@ Ed = 25e-3*e          # Donor activation energy
 Nc = 1.2e15*T**1.5    # Effective DOS in Con band 
 Nv = 9.4e16*T**1.5    # Effective DOS in Val band 
 EtaR = -E*(e*hbar/m)*pi*Eso*(Eso+2*Eg)/(Eg*(Eg+Eso)*(3*Eg+2*Eso)) 
+
+# For AlGaN, Param_AlGaN = x*Param_AlN + (1-x)*Param_GaN 
+# (comment while simulating AlN/GaN)
+x_al = 0.3 
+a = 0.31117e-10*x_al + 3.186e-10*(1-x_al)
+c = 0.49788e-10*x_al + 5.186e-10*(1-x_al)             
+Eg = x_al*(6.292-(((1.799e-3)*T*T)/(T+1462)))*e + (1-x_al)*(3.427-(((5.31156e-4)*T*T)/(T+992)))*e 
+EgL = 6.9*e*x_al + 4.9*e*(1-x_al) 
+Eso = 0.019*e*x_al + 0.008*e*(1-x_al) 
+ep = 9.14*ep0*x_al + 8.9*ep0*(1-x_al) 
+epInf = 4.84*ep0*x_al + 5.35*ep0*(1-x_al) 
+m = 1/(x_al/(0.4*m0) + (1-x_al)/(0.2*m0)) 
+muB = e*hbar/(2*m)             # Bohr Magneton 
+aNP = (e/Eg)*(1-m/m0)**2       # Non-parabolicity Const
+eta = Eso/(Eso+Eg)  
+Gamma = 1e14*x_al + 1e15*(1-x_al)    # Auto-Calibrable Scattering rate              
+ye = 2.2591e-30*x_al + 0.32e-30*(1-x_al)       # Dresselhaus SOC term
+ae = 0.77011*e*1e-13*x_al + 0.009*e*1e-13*(1-x_al)    # Rashba SOC term
+Bk = 12.5725643*x_al + 3.9580123*(1-x_al)
+Da = 12.7*e*x_al + 9.2*e*(1-x_al)                 # Deformation potential
+dens = 3.255e3*x_al + 6.15e3*(1-x_al)              # Material denasity (kg/m3) of GaN
+vSnd = 11270*x_al + 7960*(1-x_al)                # Sound velocity through GaN
+w0 = (99.2*x_al + 91.2*(1-x_al))*1e-3/hbar         # Optical Phonon Energy hbar*w0 
+# Boltzmann Dist Const
+A = sqrt(m/(2*pi*kT))
+b = m/(2*kT) 
+Ed = 25e-3*e*x_al + 12e-3*e*(1-x_al)          # Donor activation energy
+Nc = (1.2e15*x_al + 4.3e14*(1-x_al))*T**1.5    # Effective DOS in Con band 
+Nv = (9.4e16*x_al + 8.9e15*(1-x_al))*T**1.5    # Effective DOS in Val band 
+EtaR = -E*(e*hbar/m)*pi*Eso*(Eso+2*Eg)/(Eg*(Eg+Eso)*(3*Eg+2*Eso)) 
+
 
 # %% Necessary Functions
 #---------------------------- Random Number Generator -------------------------------#
